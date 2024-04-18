@@ -16,7 +16,7 @@ class MainActivity : AppCompatActivity() {
     private val userViewModel: UserViewModel by viewModels()
     private lateinit var itemBinding: ItemBinding
     private lateinit var adapter: UserAdapter
-    private val listUsers: ListUsers // Объект PersonService
+    private val listUsers: ListUsers
         get() = (applicationContext as App).listUsers
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,12 +28,12 @@ class MainActivity : AppCompatActivity() {
         itemBinding = ItemBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val manager = LinearLayoutManager(this) // LayoutManager
-        adapter = UserAdapter() // Создание объекта
-        adapter.data = listUsers.getUsers() // Заполнение данными
+        val manager = LinearLayoutManager(this)
+        adapter = UserAdapter()
+        adapter.data = listUsers.getUsers()
         userViewModel.init(adapter.data)
 
-        binding.recyclerView.layoutManager = manager // Назначение LayoutManager для RecyclerView
+        binding.recyclerView.layoutManager = manager
         binding.recyclerView.adapter = adapter
 
         userViewModel.userLiveList.observe(this) {
