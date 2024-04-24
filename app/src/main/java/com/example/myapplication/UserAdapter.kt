@@ -1,30 +1,55 @@
 package com.example.myapplication
 
+import android.app.Person
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ItemBinding
+class UserDiffUtil(
+    private val oldList: List<User>,
+    private val newList: List<User>
+) : DiffUtil.Callback() {
+    override fun getOldListSize(): Int = oldList.size
+    override fun getNewListSize(): Int = newList.size
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        val oldUser = oldList[oldItemPosition]
+        val newUser = newList[newItemPosition]
+        return oldUser.id == newUser.id
+    }
 
-class UserAdapter: RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        val oldPerson = oldList[oldItemPosition]
+        val newPerson = newList[newItemPosition]
+        return oldPerson == newPerson
+    }
+}
+interface UserActionListener {
+    fun onUserInfo(user: User)
+    fun onUserMove(user: User, position: Int)
+    fun onUserDelete(user: User)
+}
+class UserAdapter (private val userActionListener: UserActionListener) :
+    RecyclerView.Adapter<UserAdapter.UserViewHolder>(), View.OnClickListener {
+
     var data: List<User> = emptyList()
         set(newValue){
+            val userDiffUtil = UserDiffUtil(field, newValue)
+            val userDiffUtilResult = DiffUtil.calculateDiff(userDiffUtil)
             field = newValue
-            notifyDataSetChanged()
+            userDiffUtilResult.dispatchUpdatesTo(this@UserAdapter)
         }
-
-    var onItemClick: ((User) -> Unit)? = null
-    var onChangePositionUp: ((User) -> Unit)? = null
-    var onChangePositionDown: ((User) -> Unit)? = null
-    var onDelete: ((User) -> Unit)? = null
     class UserViewHolder(val binding: ItemBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
         val inflater = LayoutInflater.from( parent.context)
         val binding = ItemBinding.inflate(inflater, parent, false)
 
+        binding.root.setOnClickListener(this)
+        binding.imageView2.setOnClickListener(this)
         return UserViewHolder(binding)
     }
 
@@ -42,18 +67,19 @@ class UserAdapter: RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
                 .placeholder(R.drawable.ic_person)
                 .into(imageView)
             imageView2.tag = user
-        }
-        holder.itemView.setOnClickListener{
-            onItemClick?.invoke(user)
-        }
-        holder.binding.imageView2.setOnClickListener{
-            showPopupMenu(holder.binding.imageView2)
+            root.tag = user
         }
 
     }
-    fun updateList(newList: List<User>) {
-        data = newList
-        notifyDataSetChanged()
+    override fun onClick(view: View)
+    {
+        val user: User = view.tag as User
+
+        when (view.id) {
+            R.id.imageView2 -> showPopupMenu(view)
+            else -> userActionListener.onUserInfo(user)
+        }
+
     }
     private fun showPopupMenu(view: View) {
         val popupMenu = PopupMenu(view.context, view)
@@ -61,15 +87,15 @@ class UserAdapter: RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.menu_item_1 -> {
-                    onChangePositionUp?.invoke(view.tag as User)
+                    userActionListener.onUserMove(view.tag as User, 1)
                     true
                 }
                 R.id.menu_item_2 -> {
-                    onChangePositionDown?.invoke(view.tag as User)
+                    userActionListener.onUserMove(view.tag as User, -1)
                     true
                 }
                 R.id.menu_item_3 -> {
-                    onDelete?.invoke(view.tag as User)
+                    userActionListener.onUserDelete(view.tag as User)
                     true
                 }
                 else -> false
