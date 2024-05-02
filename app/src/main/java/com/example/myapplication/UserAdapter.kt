@@ -1,6 +1,5 @@
 package com.example.myapplication
 
-import android.app.Person
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -59,9 +58,9 @@ class UserAdapter (private val userActionListener: UserActionListener) :
         val user = data[position]
         val context = holder.itemView.context
         with(holder.binding){
-            nameTextView.text = user.name
+            nameTextView.text = "${user.first_name} ${user.last_name}"
             Glide.with(context)
-                .load(user.image)
+                .load(user.avatar)
                 .circleCrop()
                 .error(R.drawable.ic_person)
                 .placeholder(R.drawable.ic_person)
