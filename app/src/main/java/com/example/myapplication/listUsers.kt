@@ -1,8 +1,9 @@
 package com.example.myapplication
 
+import com.example.myapplication.Retrofit.RetrofitClient
+import com.example.myapplication.Retrofit.UsersApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import net.datafaker.Faker
 
 typealias UserListener = (persons: List<User>) -> Unit
 
@@ -11,8 +12,8 @@ class ListUsers {
     private var listeners = mutableListOf<UserListener>()
     private var usersApi = RetrofitClient.getInstance().create(UsersApi::class.java)
 
-    /*    init {
-            val faker = Faker(Locale("ru"))
+    init {
+            /*val faker = Faker(Locale("ru"))
             users = (1..120).map {
                 var name = faker.name().nameWithMiddle()
                 val words = name.split(" ")
@@ -23,13 +24,10 @@ class ListUsers {
                     companyName = faker.company().name(),
                     image = "https://api.dicebear.com/8.x/pixel-art/png?seed=${name}"
                 )
-            }.toMutableList()
-        }*/
-    suspend fun loadUsers() {
-        val data = usersApi.getUsers()
-        if (data != null) {
-            data.body()?.let { users = it.data }
+            }.toMutableList()*/
         }
+    suspend fun loadUsers(usersRepository: UsersRepository) {
+        users = usersRepository.getAllUserData()
     }
 
     fun getUsers(): List<User> = users
@@ -45,16 +43,16 @@ class ListUsers {
         notifyChanges()
     }
 
-    suspend fun deleteUser(user: User): Int = withContext(Dispatchers.Default){
-            val response = usersApi.deleteUser(user.id)
-            withContext(Dispatchers.Main) {
-                val temp = users.toMutableList()
-                temp.remove(user)
-                users = temp
-                notifyChanges()
-            }
-        return@withContext response.code()
+    suspend fun deleteUser(user: User): Int = withContext(Dispatchers.Default) {
+        val response = usersApi.deleteUser(user.id)
+        withContext(Dispatchers.Main) {
+            val temp = users.toMutableList()
+            temp.remove(user)
+            users = temp
+            notifyChanges()
         }
+        return@withContext response.code()
+    }
 
     fun addListener(listener: UserListener) {
         listeners.add(listener)

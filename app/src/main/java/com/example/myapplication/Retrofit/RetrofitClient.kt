@@ -1,5 +1,6 @@
-package com.example.myapplication
+package com.example.myapplication.Retrofit
 
+import com.example.myapplication.DataList
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -13,7 +14,7 @@ interface UsersApi {
     suspend fun getUsers() : Response<DataList>
 
     @DELETE("/api/users/{ID}")
-    suspend fun deleteUser(@Path("ID") userID: Int): Response<ResponseBody>
+    suspend fun deleteUser(@Path("ID") userID: Long): Response<ResponseBody>
 }
 
 object RetrofitClient {

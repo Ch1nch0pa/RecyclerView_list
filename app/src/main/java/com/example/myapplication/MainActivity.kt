@@ -9,6 +9,10 @@ import androidx.appcompat.app.AppCompatActivity
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.example.myapplication.Retrofit.RetrofitClient
+import com.example.myapplication.Retrofit.UsersApi
+import com.example.myapplication.Room.AppDatabase
 import com.example.myapplication.databinding.ActivityMainBinding
 import com.example.myapplication.databinding.ItemBinding
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +25,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var itemBinding: ItemBinding
     private lateinit var adapter: UserAdapter
+    private var usersApi = RetrofitClient.getInstance().create(UsersApi::class.java)
+    private lateinit var db: AppDatabase
+    private lateinit var usersRepository: UsersRepository
     private val listUsers: ListUsers
         get() = (applicationContext as App).listUsers
 
@@ -30,7 +37,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         itemBinding = ItemBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        db = AppDatabase.getDb(applicationContext)
+        usersRepository = UsersRepository(db.getUsersDao())
         val manager = LinearLayoutManager(this)
         adapter = UserAdapter(object : UserActionListener {
             override fun onUserInfo(user: User) {
@@ -41,8 +49,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onUserMove(user: User, position: Int) = listUsers.moveUser(user, position)
-            override fun onUserDelete(user: User){
+            override fun onUserDelete(user: User) {
                 GlobalScope.launch(Dispatchers.Main) {
+                    usersRepository.removeUserByID(user.id)
                     val response = listUsers.deleteUser(user)
                     Toast.makeText(this@MainActivity, "Код ответа: $response", Toast.LENGTH_SHORT).show()
                 }
@@ -50,16 +59,30 @@ class MainActivity : AppCompatActivity() {
         })
         listUsers.addListener(listener)
         GlobalScope.launch {
-                listUsers.loadUsers()
-                withContext(Dispatchers.Main) {
-                    adapter.data = listUsers.getUsers()
-                }
+            updateAdapterData()
         }
-        adapter.data = listUsers.getUsers()
 
+        val swipe: SwipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
+        swipe.setOnRefreshListener {
+            GlobalScope.launch {
+                usersRepository.insertNewUserData(usersApi)
+                updateAdapterData()
+                withContext(Dispatchers.Main){
+                    swipe.isRefreshing = false
+                }
+            }
+        }
         binding.recyclerView.layoutManager = manager
-        binding.recyclerView.adapter = adapter
 
+
+    }
+
+    suspend fun updateAdapterData() {
+        listUsers.loadUsers(usersRepository)
+        withContext(Dispatchers.Main) {
+            adapter.data = listUsers.getUsers()
+            binding.recyclerView.adapter = adapter
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
